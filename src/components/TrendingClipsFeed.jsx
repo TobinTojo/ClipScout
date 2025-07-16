@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { fetchTrendingClips } from '../utils/twitchApi'
 import ClipCard from './ClipCard'
+import { supabase } from '../utils/supabaseClient'
 
 const POPULAR_CATEGORIES = [
   'Just Chatting',
@@ -71,6 +72,11 @@ function TrendingClipsFeed() {
     setCategorySuggestions([])
   }
 
+  // Strict language filtering
+  const filteredClips = language
+    ? clips.filter(clip => clip.language === language)
+    : clips
+
   return (
     <div>
       <div className="mb-8">
@@ -115,49 +121,33 @@ function TrendingClipsFeed() {
             </select>
           </div>
         </div>
-        <div className="sort-controls">
-          <div className="sort-buttons">
-            <button onClick={() => setClips([...clips].sort((a, b) => b.virality_score - a.virality_score))} className="btn-pro-secondary">🔥 Sort by Virality</button>
-            <button onClick={() => setClips([...clips].sort((a, b) => b.view_count - a.view_count))} className="btn-pro-secondary">👀 Sort by Views</button>
-            <button onClick={() => setClips([...clips].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)))} className="btn-pro-secondary">⏰ Sort by Recent</button>
-          </div>
-          <button onClick={loadTrendingClips} className="btn-pro">🔄 Refresh</button>
-        </div>
       </div>
-      {loading ? (
+      {loading && (
         <div className="card-pro text-center text-[#a1a1aa]">Loading trending clips...</div>
-      ) : error ? (
+      )}
+      {error && !loading && (
         <div className="card-pro text-center text-[#a1a1aa]">{error}</div>
-      ) : clips.length === 0 ? (
-        <div className="card-pro text-center text-[#a1a1aa]">No trending clips found</div>
-      ) : (
+      )}
+      {!loading && !error && filteredClips.length > 0 && (
         <div>
-          {clips.map((clip) => (
-            <ClipCard key={clip.id} clip={clip} />
-          ))}
+          <div className="mb-6">
+            <h3 className="text-xl font-bold mb-2" style={{color:'#a78bfa'}}>📺 Trending in {category}</h3>
+            <div className="text-[#a1a1aa] mb-4">Found {filteredClips.length} clip{filteredClips.length !== 1 ? 's' : ''}</div>
+          </div>
+          <div>
+            {filteredClips.map((clip) => (
+              <ClipCard key={clip.id} clip={clip} onSave={null} />
+            ))}
+          </div>
         </div>
       )}
-      <div className="card-pro mt-8">
-        <h3 className="text-lg font-bold mb-3" style={{color:'#a78bfa'}}>📊 Feed Stats</h3>
-        <div className="flex flex-wrap gap-8">
-          <div>
-            <div className="text-[#a1a1aa] text-sm mb-1">Total Clips</div>
-            <div className="text-xl font-bold">{clips.length}</div>
-          </div>
-          <div>
-            <div className="text-[#a1a1aa] text-sm mb-1">Avg Views</div>
-            <div className="text-xl font-bold">{clips.length > 0 ? Math.round(clips.reduce((sum, clip) => sum + clip.view_count, 0) / clips.length).toLocaleString() : 0}</div>
-          </div>
-          <div>
-            <div className="text-[#a1a1aa] text-sm mb-1">Avg Virality Score</div>
-            <div className="text-xl font-bold">{clips.length > 0 ? Math.round(clips.reduce((sum, clip) => sum + clip.virality_score, 0) / clips.length) : 0}</div>
-          </div>
-          <div>
-            <div className="text-[#a1a1aa] text-sm mb-1">Top Streamer</div>
-            <div className="text-lg font-semibold">{clips.length > 0 ? clips.reduce((top, clip) => clip.view_count > top.view_count ? clip : top).broadcaster_name : 'N/A'}</div>
-          </div>
+      {!loading && !error && filteredClips.length === 0 && (
+        <div className="card-pro text-center text-[#a1a1aa]">
+          <div className="mb-4 text-5xl">😕</div>
+          <div className="mb-2 font-bold text-lg">No clips found for this filter</div>
+          <div className="mb-4">Try a different category or language.</div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

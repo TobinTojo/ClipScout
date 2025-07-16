@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { fetchStreamerClips } from '../utils/twitchApi'
 import ClipCard from './ClipCard'
+import { supabase } from '../utils/supabaseClient'
 
 function StreamerSearch() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -43,6 +44,9 @@ function StreamerSearch() {
   const sortByRecent = () => {
     setClips([...clips].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)))
   }
+  const handleSaveClip = (clip) => {
+    // This will be handled in the modal
+  }
   return (
     <div>
       <div className="mb-10">
@@ -83,7 +87,7 @@ function StreamerSearch() {
           </div>
           <div>
             {clips.map((clip) => (
-              <ClipCard key={clip.id} clip={clip} />
+              <ClipCard key={clip.id} clip={clip} onSave={handleSaveClip} />
             ))}
           </div>
           <div className="card-pro mt-8">

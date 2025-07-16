@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { generateViralTitle } from '../utils/titleGenerator'
+import { supabase } from '../utils/supabaseClient'
 
-function ClipCard({ clip }) {
+function ClipCard({ clip, onSave }) {
   const [showTitleGenerator, setShowTitleGenerator] = useState(false)
   const [generatedTitles, setGeneratedTitles] = useState([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [showSaveForm, setShowSaveForm] = useState(false)
 
   const formatViewCount = (count) => {
     if (count >= 1000000) {
@@ -112,8 +114,128 @@ function ClipCard({ clip }) {
         ))}
       </div>
       {/* Actions */}
-      <div className="clip-actions">
-        <button onClick={openInNewTab} className="clip-btn">🔗 Open in New Tab</button>
+      <div className="flex gap-2 mt-4">
+        <button className="btn-pro-secondary" onClick={copyClipLink}>🔗 Copy Link</button>
+        {onSave && (
+          <button className="btn-pro" onClick={() => setShowSaveForm(!showSaveForm)}>{showSaveForm ? 'Cancel' : '💾 Save'}</button>
+        )}
+      </div>
+      {showSaveForm && (
+        <div className="mt-4">
+          <SaveClipForm clip={clip} onClose={() => setShowSaveForm(false)} onSave={onSave} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SaveClipForm({ clip, onClose, onSave }) {
+  const [folders, setFolders] = useState([])
+  const [selectedFolder, setSelectedFolder] = useState('')
+  const [tags, setTags] = useState([])
+  const [tagInput, setTagInput] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+  const [userId, setUserId] = useState(null)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user?.id || null)
+    })
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setUserId(session?.user?.id || null)
+    })
+  }, [])
+
+  useEffect(() => {
+    async function fetchFolders() {
+      if (!userId) return
+      const { data, error } = await supabase
+        .from('folders')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+      if (!error) setFolders(data)
+    }
+    fetchFolders()
+  }, [userId])
+
+  const handleAddTag = (e) => {
+    e.preventDefault()
+    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
+      setTags([...tags, tagInput.trim()])
+      setTagInput('')
+    }
+  }
+
+  const handleRemoveTag = (tag) => {
+    setTags(tags.filter(t => t !== tag))
+  }
+
+  const handleSave = async () => {
+    if (!selectedFolder) {
+      setError('Please select a folder')
+      return
+    }
+    setSaving(true)
+    setError(null)
+    const { error } = await supabase.from('clips').insert({
+      user_id: userId,
+      folder_id: selectedFolder,
+      url: clip.url,
+      title: clip.title,
+      tags,
+      downloaded: false,
+      planned_edit: false,
+    })
+    setSaving(false)
+    if (error) {
+      setError('Failed to save clip')
+    } else {
+      if (onSave) onSave(clip)
+      onClose()
+    }
+  }
+
+  return (
+    <div className="bg-[#232336] p-4 rounded-xl w-full max-w-md">
+      <h3 className="text-lg font-bold mb-4" style={{color:'#a78bfa'}}>Save Clip</h3>
+      <div className="mb-4">
+        <label className="block mb-2 font-semibold">Select Folder</label>
+        <select
+          className="input-pro w-full mb-4"
+          value={selectedFolder}
+          onChange={e => setSelectedFolder(e.target.value)}
+        >
+          <option value="">-- Select a folder --</option>
+          {folders.map(folder => (
+            <option key={folder.id} value={folder.id}>{folder.name}</option>
+          ))}
+        </select>
+        <label className="block mb-2 font-semibold">Tags</label>
+        <form onSubmit={handleAddTag} className="flex gap-2 mb-2">
+          <input
+            type="text"
+            className="input-pro flex-1"
+            placeholder="Add tag"
+            value={tagInput}
+            onChange={e => setTagInput(e.target.value)}
+            disabled={saving}
+          />
+          <button className="btn-pro" type="submit" disabled={saving || !tagInput.trim()}>Add</button>
+        </form>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {tags.map(tag => (
+            <span key={tag} className="badge-pro cursor-pointer" onClick={() => handleRemoveTag(tag)}>{tag} ✕</span>
+          ))}
+        </div>
+      </div>
+      {error && <div className="text-red-400 text-sm mb-2">{error}</div>}
+      <div className="flex gap-2 justify-end">
+        <button className="btn-pro-secondary" onClick={onClose} disabled={saving}>Cancel</button>
+        <button className="btn-pro" onClick={handleSave} disabled={saving || !selectedFolder}>
+          {saving ? 'Saving...' : 'Save'}
+        </button>
       </div>
     </div>
   )
