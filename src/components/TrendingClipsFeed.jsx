@@ -30,8 +30,12 @@ function TrendingClipsFeed() {
   const [clips, setClips] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [category, setCategory] = useState('Just Chatting')
-  const [categoryInput, setCategoryInput] = useState('Just Chatting')
+  const [category, setCategory] = useState(() => {
+    return localStorage.getItem('lastCategory') || 'Just Chatting'
+  })
+  const [categoryInput, setCategoryInput] = useState(() => {
+    return localStorage.getItem('lastCategory') || 'Just Chatting'
+  })
   const [categorySuggestions, setCategorySuggestions] = useState([])
   const [language, setLanguage] = useState('')
 
@@ -39,6 +43,10 @@ function TrendingClipsFeed() {
     loadTrendingClips()
     // eslint-disable-next-line
   }, [category, language])
+
+  useEffect(() => {
+    localStorage.setItem('lastCategory', category)
+  }, [category])
 
   const loadTrendingClips = async () => {
     try {
@@ -70,12 +78,18 @@ function TrendingClipsFeed() {
     setCategory(cat)
     setCategoryInput(cat)
     setCategorySuggestions([])
+    localStorage.setItem('lastCategory', cat)
   }
 
   // Strict language filtering
   const filteredClips = language
     ? clips.filter(clip => clip.language === language)
     : clips
+
+  // Restore Save button
+  const handleSaveClip = (clip) => {
+    // Optionally show a notification or refresh
+  }
 
   return (
     <div>
@@ -136,7 +150,7 @@ function TrendingClipsFeed() {
           </div>
           <div>
             {filteredClips.map((clip) => (
-              <ClipCard key={clip.id} clip={clip} onSave={null} />
+              <ClipCard key={clip.id} clip={clip} onSave={handleSaveClip} />
             ))}
           </div>
         </div>

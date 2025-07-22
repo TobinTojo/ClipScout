@@ -1,7 +1,7 @@
 // Mock Twitch API functions - in a real app, you'd use actual Twitch API calls
 // For now, we'll simulate the API responses
 
-const MOCK_CLIPS = [
+export const MOCK_CLIPS = [
   {
     id: '1',
     url: 'https://clips.twitch.tv/1',
@@ -92,7 +92,7 @@ const MOCK_CLIPS = [
     duration: 40,
     vod_offset: 7890
   }
-]
+];
 
 // Calculate virality score based on view count and recency
 export const calculateViralityScore = (viewCount, createdAt) => {
@@ -236,4 +236,38 @@ export const fetchStreamerClips = async (streamerName) => {
     virality_score: calculateViralityScore(clip.view_count, clip.created_at),
     tags: generateTags(clip.title),
   }));
+} 
+
+export const fetchUserInfoByName = async (username) => {
+  const token = await getTwitchAccessToken();
+  const res = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(username)}`, {
+    headers: {
+      'Client-ID': TWITCH_CLIENT_ID,
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  const data = await res.json();
+  if (data.data && data.data.length > 0) {
+    return data.data[0]; // includes profile_image_url, display_name, etc.
+  }
+  return null;
+} 
+
+export const fetchTopCategories = async (limit = 100) => {
+  const token = await getTwitchAccessToken();
+  const res = await fetch(`https://api.twitch.tv/helix/games/top?first=${limit}`, {
+    headers: {
+      'Client-ID': TWITCH_CLIENT_ID,
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  const data = await res.json();
+  if (data.data && data.data.length > 0) {
+    return data.data.map(cat => ({
+      id: cat.id,
+      name: cat.name,
+      boxArtUrl: cat.box_art_url,
+    }));
+  }
+  return [];
 } 

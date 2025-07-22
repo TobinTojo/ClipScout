@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../utils/supabaseClient'
 import FolderList from './FolderList'
 import ClipList from './ClipList'
-import './ClipLibrary.css'
+import '../styling/ClipLibrary.css'
 
 function ClipLibrary() {
   const [selectedFolder, setSelectedFolder] = useState(null)

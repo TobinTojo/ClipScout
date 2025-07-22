@@ -48,7 +48,7 @@ function StreamerSearch() {
     // This will be handled in the modal
   }
   return (
-    <div>
+    <div className="streamer-search-wrap">
       <div className="mb-10">
         <h2 className="text-2xl font-bold mb-2" style={{color:'#a78bfa'}}>🔍 Search Streamer Clips</h2>
         <div className="text-[#a1a1aa] mb-6">Find the most viral clips from your favorite Twitch streamers</div>
@@ -90,24 +90,29 @@ function StreamerSearch() {
               <ClipCard key={clip.id} clip={clip} onSave={handleSaveClip} />
             ))}
           </div>
-          <div className="card-pro mt-8">
-            <h3 className="text-lg font-bold mb-3" style={{color:'#a78bfa'}}>📊 {searchTerm} Stats</h3>
-            <div className="flex flex-wrap gap-8">
+          <div className="card-pro mt-8 stats-card">
+            <div className="stats-header">
+              <span className="stats-icon">📊</span>
+              <span className="stats-title">{searchTerm} Stats</span>
+            </div>
+            <div className="stats-grid">
               <div>
-                <div className="text-[#a1a1aa] text-sm mb-1">Total Clips</div>
-                <div className="text-xl font-bold">{clips.length}</div>
+                <div className="stats-label">Total Clips</div>
+                <div className="stats-value">{clips.length}</div>
               </div>
               <div>
-                <div className="text-[#a1a1aa] text-sm mb-1">Total Views</div>
-                <div className="text-xl font-bold">{clips.reduce((sum, clip) => sum + clip.view_count, 0).toLocaleString()}</div>
+                <div className="stats-label">Total Views</div>
+                <div className="stats-value">{clips.reduce((sum, clip) => sum + clip.view_count, 0).toLocaleString()}</div>
               </div>
               <div>
-                <div className="text-[#a1a1aa] text-sm mb-1">Avg Virality Score</div>
-                <div className="text-xl font-bold">{Math.round(clips.reduce((sum, clip) => sum + clip.virality_score, 0) / clips.length)}</div>
+                <div className="stats-label">Avg Virality Score</div>
+                <div className="stats-value">{Math.round(clips.reduce((sum, clip) => sum + clip.virality_score, 0) / clips.length)}</div>
               </div>
               <div>
-                <div className="text-[#a1a1aa] text-sm mb-1">Most Viral Clip</div>
-                <div className="text-lg font-semibold">{clips.reduce((top, clip) => clip.virality_score > top.virality_score ? clip : top).title.substring(0, 20)}...</div>
+                <div className="stats-label">Most Viral Clip</div>
+                <div className="stats-value stats-clip-title" title={clips.reduce((top, clip) => clip.virality_score > top.virality_score ? clip : top).title}>
+                  {clips.reduce((top, clip) => clip.virality_score > top.virality_score ? clip : top).title.substring(0, 20)}...
+                </div>
               </div>
             </div>
           </div>

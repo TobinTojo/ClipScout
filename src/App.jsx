@@ -4,6 +4,7 @@ import TrendingClipsFeed from './components/TrendingClipsFeed'
 import StreamerSearch from './components/StreamerSearch'
 import Header from './components/Header'
 import ClipLibrary from './components/ClipLibrary'
+import TrendingCreators from './components/TrendingCreators';
 
 function App() {
   const [activeTab, setActiveTab] = useState('trending')
@@ -34,33 +35,13 @@ function App() {
 
   return (
     <div className="app-root">
-      <Header />
+      <Header session={session} activeTab={activeTab} setActiveTab={setActiveTab} />
       <main className="main-container">
-        {/* Tab Navigation */}
-        <div className="tab-row">
-          <button
-            onClick={() => setActiveTab('trending')}
-            className={`tab-btn${activeTab === 'trending' ? ' tab-btn-active' : ''}`}
-          >
-            🔥 Trending Clips
-          </button>
-          <button
-            onClick={() => setActiveTab('search')}
-            className={`tab-btn${activeTab === 'search' ? ' tab-btn-active' : ''}`}
-          >
-            🔍 Streamer Search
-          </button>
-          <button
-            onClick={() => setActiveTab('library')}
-            className={`tab-btn${activeTab === 'library' ? ' tab-btn-active' : ''}`}
-          >
-            🗃 Clip Library
-          </button>
-        </div>
         <div>
           {activeTab === 'trending' && <TrendingClipsFeed />}
           {activeTab === 'search' && <StreamerSearch />}
           {activeTab === 'library' && <ClipLibrary />}
+          {activeTab === 'creators' && <TrendingCreators />}
         </div>
       </main>
     </div>

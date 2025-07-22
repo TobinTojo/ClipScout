@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { generateViralTitle } from '../utils/titleGenerator'
 import { supabase } from '../utils/supabaseClient'
+import { generateTagsWithGroq } from '../utils/groqTagGenerator';
 
 function ClipCard({ clip, onSave }) {
   const [showTitleGenerator, setShowTitleGenerator] = useState(false)
@@ -137,6 +138,10 @@ function SaveClipForm({ clip, onClose, onSave }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [userId, setUserId] = useState(null)
+  const [showCreateFolder, setShowCreateFolder] = useState(false)
+  const [newFolderName, setNewFolderName] = useState('')
+  const [creatingFolder, setCreatingFolder] = useState(false)
+  const [generatingTags, setGeneratingTags] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -160,6 +165,26 @@ function SaveClipForm({ clip, onClose, onSave }) {
     fetchFolders()
   }, [userId])
 
+  // AI Tag Generation (Groq)
+  useEffect(() => {
+    async function generateTags() {
+      setGeneratingTags(true);
+      setError(null);
+      try {
+        const prompt = `Generate 5 short, relevant, comma-separated tags for this Twitch clip.\nTitle: ${clip.title}\nBroadcaster: ${clip.broadcaster_name}\nRespond with only the tags, separated by commas.`;
+        const tagString = await generateTagsWithGroq(prompt);
+        const aiTags = tagString.split(',').map(t => t.trim()).filter(Boolean);
+        setTags(aiTags);
+      } catch (err) {
+        setError('Groq tag generation failed: ' + err.message);
+      } finally {
+        setGeneratingTags(false);
+      }
+    }
+    generateTags();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clip]);
+
   const handleAddTag = (e) => {
     e.preventDefault()
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
@@ -170,6 +195,25 @@ function SaveClipForm({ clip, onClose, onSave }) {
 
   const handleRemoveTag = (tag) => {
     setTags(tags.filter(t => t !== tag))
+  }
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return
+    setCreatingFolder(true)
+    setError(null)
+    const { error } = await supabase.from('folders').insert({
+      user_id: userId,
+      name: newFolderName.trim(),
+    })
+    setCreatingFolder(false)
+    setNewFolderName('')
+    if (error) {
+      setError('Failed to create folder')
+    } else {
+      setFolders([...folders, { id: error.code, name: newFolderName.trim() }])
+      setSelectedFolder(error.code)
+      setShowCreateFolder(false)
+    }
   }
 
   const handleSave = async () => {
@@ -197,26 +241,73 @@ function SaveClipForm({ clip, onClose, onSave }) {
     }
   }
 
+  // When showing the create folder input, prefill with broadcaster_name
+  const handleShowCreateFolder = () => {
+    setShowCreateFolder(true)
+    setNewFolderName(clip.broadcaster_name || '')
+  }
+
   return (
-    <div className="bg-[#232336] p-4 rounded-xl w-full max-w-md">
-      <h3 className="text-lg font-bold mb-4" style={{color:'#a78bfa'}}>Save Clip</h3>
-      <div className="mb-4">
-        <label className="block mb-2 font-semibold">Select Folder</label>
-        <select
-          className="input-pro w-full mb-4"
-          value={selectedFolder}
-          onChange={e => setSelectedFolder(e.target.value)}
-        >
-          <option value="">-- Select a folder --</option>
-          {folders.map(folder => (
-            <option key={folder.id} value={folder.id}>{folder.name}</option>
-          ))}
-        </select>
-        <label className="block mb-2 font-semibold">Tags</label>
-        <form onSubmit={handleAddTag} className="flex gap-2 mb-2">
+    <div className="save-clip-form">
+      <h3 className="save-clip-title">Save Clip</h3>
+      <div className="save-clip-section">
+        <label className="save-clip-label">Select Folder</label>
+        <div className="save-clip-folder-row">
+          <select
+            className="input-pro"
+            value={selectedFolder}
+            onChange={e => setSelectedFolder(e.target.value)}
+            disabled={saving || creatingFolder}
+          >
+            <option value="">-- Select a folder --</option>
+            {folders.map(folder => (
+              <option key={folder.id} value={folder.id}>{folder.name}</option>
+            ))}
+          </select>
+          <button
+            className="btn-pro-secondary"
+            type="button"
+            onClick={handleShowCreateFolder}
+            disabled={saving || creatingFolder}
+          >
+            + New
+          </button>
+        </div>
+        {showCreateFolder && (
+          <div className="save-clip-create-folder-row">
+            <input
+              type="text"
+              className="input-pro"
+              placeholder="Folder name"
+              value={newFolderName}
+              onChange={e => setNewFolderName(e.target.value)}
+              disabled={creatingFolder}
+            />
+            <button
+              className="btn-pro"
+              type="button"
+              onClick={handleCreateFolder}
+              disabled={creatingFolder || !newFolderName.trim()}
+            >
+              {creatingFolder ? 'Creating...' : 'Create'}
+            </button>
+            <button
+              className="btn-pro-secondary"
+              type="button"
+              onClick={() => setShowCreateFolder(false)}
+              disabled={creatingFolder}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+        <label className="save-clip-label">Tags</label>
+        {generatingTags && <div className="save-clip-tags-list">Generating tags...</div>}
+        {error && <div className="save-clip-error">{error}</div>}
+        <form onSubmit={handleAddTag} className="save-clip-tag-row">
           <input
             type="text"
-            className="input-pro flex-1"
+            className="input-pro"
             placeholder="Add tag"
             value={tagInput}
             onChange={e => setTagInput(e.target.value)}
@@ -224,14 +315,14 @@ function SaveClipForm({ clip, onClose, onSave }) {
           />
           <button className="btn-pro" type="submit" disabled={saving || !tagInput.trim()}>Add</button>
         </form>
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="save-clip-tags-list">
           {tags.map(tag => (
-            <span key={tag} className="badge-pro cursor-pointer" onClick={() => handleRemoveTag(tag)}>{tag} ✕</span>
+            <span key={tag} className="badge-pro" onClick={() => handleRemoveTag(tag)}>{tag} ✕</span>
           ))}
         </div>
       </div>
-      {error && <div className="text-red-400 text-sm mb-2">{error}</div>}
-      <div className="flex gap-2 justify-end">
+      {error && <div className="save-clip-error">{error}</div>}
+      <div className="save-clip-actions">
         <button className="btn-pro-secondary" onClick={onClose} disabled={saving}>Cancel</button>
         <button className="btn-pro" onClick={handleSave} disabled={saving || !selectedFolder}>
           {saving ? 'Saving...' : 'Save'}
