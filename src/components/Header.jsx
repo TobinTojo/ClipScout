@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { supabase } from '../utils/supabaseClient'
 
-function Header({ session, activeTab, setActiveTab }) {
+function Header({ session, activeTab, setActiveTab, onSignUp, onLogIn }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const handleLogout = async () => {
     await supabase.auth.signOut()
     window.location.reload()
   }
+  const isLoggedIn = !!session?.user
   return (
     <header className="header spotify-header">
       <div className="header-container spotify-header-container">
@@ -25,69 +26,85 @@ function Header({ session, activeTab, setActiveTab }) {
             </svg>
           </button>
           {/* Desktop nav */}
-          <nav className="spotify-nav-desktop">
-            <button
-              onClick={() => setActiveTab('trending')}
-              className={`spotify-nav-btn${activeTab === 'trending' ? ' active' : ''}`}
-            >
-              Trending
-            </button>
-            <button
-              onClick={() => setActiveTab('search')}
-              className={`spotify-nav-btn${activeTab === 'search' ? ' active' : ''}`}
-            >
-              Search
-            </button>
-            <button
-              onClick={() => setActiveTab('library')}
-              className={`spotify-nav-btn${activeTab === 'library' ? ' active' : ''}`}
-            >
-              Library
-            </button>
-            <button
-              onClick={() => setActiveTab('creators')}
-              className={`spotify-nav-btn${activeTab === 'creators' ? ' active' : ''}`}
-            >
-              Creators
-            </button>
-          </nav>
+          {isLoggedIn ? (
+            <nav className="spotify-nav-desktop">
+              <button
+                onClick={() => setActiveTab('trending')}
+                className={`spotify-nav-btn${activeTab === 'trending' ? ' active' : ''}`}
+              >
+                Trending
+              </button>
+              <button
+                onClick={() => setActiveTab('search')}
+                className={`spotify-nav-btn${activeTab === 'search' ? ' active' : ''}`}
+              >
+                Search
+              </button>
+              <button
+                onClick={() => setActiveTab('library')}
+                className={`spotify-nav-btn${activeTab === 'library' ? ' active' : ''}`}
+              >
+                Library
+              </button>
+              <button
+                onClick={() => setActiveTab('creators')}
+                className={`spotify-nav-btn${activeTab === 'creators' ? ' active' : ''}`}
+              >
+                Creators
+              </button>
+            </nav>
+          ) : (
+            <nav className="spotify-nav-desktop">
+              <button className="spotify-nav-btn" onClick={onSignUp}>Sign Up</button>
+              <button className="spotify-nav-btn" onClick={onLogIn}>Log In</button>
+            </nav>
+          )}
           {/* User actions */}
-          <div className="spotify-header-user-actions">
-            {session?.user?.email && (
-              <span className="spotify-header-username">{session.user.email}</span>
-            )}
-            <button className="spotify-logout-btn" onClick={handleLogout}>Logout</button>
-          </div>
+          {isLoggedIn && (
+            <div className="spotify-header-user-actions">
+              {session?.user?.email && (
+                <span className="spotify-header-username">{session.user.email}</span>
+              )}
+              <button className="spotify-logout-btn" onClick={handleLogout}>Logout</button>
+            </div>
+          )}
         </div>
         {/* Mobile nav overlay */}
         {mobileNavOpen && (
-          <nav className="spotify-nav-mobile">
-            <button
-              onClick={() => { setActiveTab('trending'); setMobileNavOpen(false) }}
-              className={`spotify-nav-btn${activeTab === 'trending' ? ' active' : ''}`}
-            >
-              Trending
-            </button>
-            <button
-              onClick={() => { setActiveTab('search'); setMobileNavOpen(false) }}
-              className={`spotify-nav-btn${activeTab === 'search' ? ' active' : ''}`}
-            >
-              Search
-            </button>
-            <button
-              onClick={() => { setActiveTab('library'); setMobileNavOpen(false) }}
-              className={`spotify-nav-btn${activeTab === 'library' ? ' active' : ''}`}
-            >
-              Library
-            </button>
-            <button
-              onClick={() => { setActiveTab('creators'); setMobileNavOpen(false) }}
-              className={`spotify-nav-btn${activeTab === 'creators' ? ' active' : ''}`}
-            >
-              Creators
-            </button>
-            <button className="spotify-logout-btn" onClick={handleLogout}>Logout</button>
-          </nav>
+          isLoggedIn ? (
+            <nav className="spotify-nav-mobile">
+              <button
+                onClick={() => { setActiveTab('trending'); setMobileNavOpen(false) }}
+                className={`spotify-nav-btn${activeTab === 'trending' ? ' active' : ''}`}
+              >
+                Trending
+              </button>
+              <button
+                onClick={() => { setActiveTab('search'); setMobileNavOpen(false) }}
+                className={`spotify-nav-btn${activeTab === 'search' ? ' active' : ''}`}
+              >
+                Search
+              </button>
+              <button
+                onClick={() => { setActiveTab('library'); setMobileNavOpen(false) }}
+                className={`spotify-nav-btn${activeTab === 'library' ? ' active' : ''}`}
+              >
+                Library
+              </button>
+              <button
+                onClick={() => { setActiveTab('creators'); setMobileNavOpen(false) }}
+                className={`spotify-nav-btn${activeTab === 'creators' ? ' active' : ''}`}
+              >
+                Creators
+              </button>
+              <button className="spotify-logout-btn" onClick={handleLogout}>Logout</button>
+            </nav>
+          ) : (
+            <nav className="spotify-nav-mobile">
+              <button className="spotify-nav-btn" onClick={() => { onSignUp && onSignUp(); setMobileNavOpen(false) }}>Sign Up</button>
+              <button className="spotify-nav-btn" onClick={() => { onLogIn && onLogIn(); setMobileNavOpen(false) }}>Log In</button>
+            </nav>
+          )
         )}
       </div>
     </header>
